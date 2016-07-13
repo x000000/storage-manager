@@ -1,0 +1,16 @@
+{
+    "name": "0x000000/storage-manager",
+    "description": "Yii2 storage manager with thumbs support",
+    "type": "library",
+	"version": "0.1-dev",
+    "require": {
+        "yiisoft/yii2-imagine": "^2.0"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "x000000",
+            "email": "o.o.n.joy@gmail.com"
+        }
+    ]
+}
