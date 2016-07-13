@@ -1,5 +1,5 @@
 {
-    "name": "0x000000/storage-manager",
+    "name": "x000000/storage-manager",
     "description": "Yii2 storage manager with thumbs support",
     "type": "library",
 	"version": "0.1-dev",
