@@ -2,101 +2,87 @@
 
 namespace x000000\StorageManager;
 
-use Imagine\Image\Box;
-use Imagine\Image\BoxInterface;
-use Imagine\Image\Color;
-use Imagine\Image\ImageInterface;
-use Imagine\Image\Point;
-
+/**
+ * @method Transform resize(int? $width, int? $height) resize
+ * @method Transform crop(int? $width, int? $height, int|string $x, int|string $y, int|string $ratio = null) crop
+ */
 class Transform 
 {
-	const MAP = [
+	const ALIAS_MAP = [
 		Transforms\Resize::class => 'sz',
 		Transforms\Crop::class   => 'cr',
 	];
 
-	/**
-	 * Create list of Transforms\AbstractTransform from given $options
-	 * @param array $options List of options for Transforms\AbstractTransform::create()
-	 * @return array List of Transforms\AbstractTransform
-	 */
-	public static function create($options) 
+	private $_storage;
+	private $_source;
+	private $_transforms = [];
+	private $_rawUrl;
+	private $_url;
+	
+	private $_map = [
+		'resize' => Transforms\Resize::class,
+		'crop'   => Transforms\Crop::class,
+	];
+	
+	public function __construct(Storage $storage, $source) 
 	{
-		$map = array_flip(self::MAP);
-		foreach ($options as $key => &$config) {
-			$method = $map[$key] . '::create';
-			$config = $method($config);
-		}
-		return $options;
+		$this->_storage = $storage;
+		$this->_source  = $source;
 	}
-
-	/**
-	 * Serialize transform config to string
-	 * @param array $options List of Transforms\AbstractTransform objects 
-	 * or options for Transforms\AbstractTransform::create()
-	 * (see Transforms\AbstractTransform::create() for $options details)
-	 * @return string Serialized $config
-	 */
-	public static function serialize($options) 
+	
+	public function __toString() 
 	{
-		if (!is_array($options)) {
-			return '';
-		}
-
-		$tr  = array();
-		$map = array_flip(self::MAP);
-		foreach ($options as $key => $value) {
-			if (!is_object($value)) {
-				$method = $map[$key] . '::create';
-				$value  = $method($value);
+		return $this->url();
+	}
+	
+	public function url() 
+	{
+		if ($this->_url === null) {
+			if (empty($this->_source)) {
+				return $this->_url = $this->_rawUrl = false;
 			}
+			if (empty($this->_transforms)) {
+				// no transform given so we can return url to the source file
+				return $this->_url = $this->_rawUrl = $this->_storage->getSource($this->_source);
+			}
+
+			if (!$path = $this->_storage->getThumb($this->_source, $this->_transforms)) {
+				return $this->_url = $this->_rawUrl = false;
+			}
+
+			$this->_rawUrl = $path;
+
+			// we should encode file name so it won't break anything
+			$path   = explode('/', $path);
+			$path[] = urlencode( array_pop($path) );
 			
-			$tr[] = (string) $value;
+			return $this->_url = implode('/', $path);
 		}
-
-		return empty($tr) ? '' : '&' . implode('&', $tr);
-	}
-
-	/**
-	 * Returns serialized $value with null check
-	 * @param mixed $value Value to be serialized
-	 * @return string Serialized $value
-	 */
-	public static function nullSerialize($value) 
-	{
-		return $value === null ? 'null' : (string) $value;
-	}
-
-	/**
-	 * Convert percent value to absolute value
-	 * @param string $percent Percent value with trailed '%'
-	 * @param number $maxValue 100% value for a reference
-	 * @return number Return a percent value based on $percent of $maxValue. 
-	 * If $percent isn't trailed by '%', then $percent will be returned without changes.
-	 */
-	public static function percentValue($percent, $maxValue) 
-	{
-		return substr($percent, -1) == '%' 
-			? rtrim($percent, ' %') * .01 * $maxValue 
-			: $percent;
+		return $this->_url;
 	}
 	
-	/**
-	 * Modifies $width or $height (if one of them is empty) based on $box ratio.
-	 * @param number|null $width Desired width
-	 * @param number|null $height Desired height
-	 * @param BoxInterface $box Original box for a reference
-	 */
-	public static function scaleSize(&$width, &$height, BoxInterface $box) 
+	public function rawUrl() 
 	{
-		if (!$width || !$height) {
-			$r = $box->getWidth() / $box->getHeight();
-			if ($width) {
-				$height = floor($width / $r);
-			} else {
-				$width  = floor($height * $r);
+		if ($this->_url === null) {
+			$this->url();
+		}
+		return $this->_rawUrl;
+	}
+
+	public function __call($name, $arguments) 
+	{
+		if (isset($this->_map[$name])) {
+			if ($this->_url !== null) {
+				throw new \yii\base\InvalidCallException('Transforms already applied');
 			}
+
+			$class = $this->_map[$name];
+			$this->_transforms[] = new $class(... $arguments);
+			
+			return $this;
+		} else {
+			return parent::__call($name, $arguments);
 		}
 	}
-	
+
 }

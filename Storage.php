@@ -127,10 +127,10 @@ class Storage extends \yii\base\Component
 	/**
 	 * Get $file's thumb url. method works for image types obly.
 	 * @param string $file File name (see $this->processFile()'s return value)
-	 * @param array $options Source transform (see $this->createThumb()'s $options argument)
+	 * @param Transforms\AbstractTransform[] $transforms Transforms ro be applied
 	 * @return string|bool File's thumb url or false on fail
 	 */
-	public function getThumb($file, $options = null) 
+	public function getThumb($file, $transforms = []) 
 	{
 		$ext = pathinfo($file, PATHINFO_EXTENSION);
 		if (!isset($this->_allowedFiles['images'][$ext])) {
@@ -141,13 +141,13 @@ class Storage extends \yii\base\Component
 		$dir    = $this->_baseThumb . "/$relDir";
 		
 		if (is_dir($dir)) {
-			$name = pathinfo($file, PATHINFO_FILENAME) . Transform::serialize($options) . ".$ext";
+			$name = pathinfo($file, PATHINFO_FILENAME) . Helper::serializeTransforms($transforms) . ".$ext";
 			if (file_exists("$dir/$name")) {
 				return $this->_webThumb . "/$relDir/$name";
 			}
 		}
 		
-		return $this->createThumb($file, $options);
+		return $this->createThumb($file, $transforms);
 	}
 
 	/**
@@ -221,17 +221,16 @@ class Storage extends \yii\base\Component
 	}
 
 	/**
-	 * Create a thumbnail of the source $file with given $options 
-	 * (see Transforms\AbstractTransform::create() for $options details)
+	 * Create a thumbnail of the source $file with given $transforms 
 	 * @param string $file Sourse File (see $this->processFile()'s return value)
+	 * @param Transforms\AbstractTransform[] $transforms Transforms ro be applied
 	 * @return string|bool Thumb url or false on fail
 	 */
-	public function createThumb($file, $options = null) 
+	public function createThumb($file, $transforms = []) 
 	{
-		$finfo      = pathinfo($file);
-		$relDir     = $this->getFileDir($file);
-		$transforms = Transform::create($options);
-		$thbPath    = "/$relDir/" . $finfo['filename'] . Transform::serialize($transforms) . '.' . $finfo['extension'];
+		$finfo   = pathinfo($file);
+		$relDir  = $this->getFileDir($file);
+		$thbPath = "/$relDir/" . $finfo['filename'] . Helper::serializeTransforms($transforms) . '.' . $finfo['extension'];
 		
 		if (is_dir($this->_baseThumb . "/$relDir")) {
 			if (file_exists($this->_baseThumb . $thbPath)) {
@@ -252,30 +251,14 @@ class Storage extends \yii\base\Component
 	}
 
 	/**
-	 * Get image url with given transform config<br/>
+	 * Get Transform object of the $source image<br/>
 	 * This is just a helper method for convenience
 	 * @param string $source File name (see $this->processFile()'s return value)
-	 * @param array $options Source transform (see $this->createThumb()'s $options argument)
-	 * @return string|boolean Url to the file or false on fail
+	 * @return Transform Transform object for chained modify
 	 */
-	public function thumb($source, $options = []) 
+	public function thumb($source) 
 	{
-		if (empty($source)) {
-			return false;
-		}
-		if (empty($options)) {
-			// no transform given so we can return url to the source file
-			return $this->getSource($source);
-		}
-
-		if (!$path = $this->getThumb($source, $options)) {
-			return false;
-		}
-
-		// we should encode file name so it won't break anything
-		$path   = explode('/', $path);
-		$path[] = urlencode( array_pop($path) );
-		return implode('/', $path);
+		return new Transform($this, $source);
 	}
-
+	
 }

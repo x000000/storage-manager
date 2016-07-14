@@ -6,7 +6,7 @@ use Imagine\Image\Box;
 use Imagine\Image\Color;
 use Imagine\Image\ImageInterface;
 use Imagine\Image\Point;
-use x000000\StorageManager\Transform;
+use x000000\StorageManager\Helper;
 
 class Crop extends AbstractTransform
 {
@@ -27,22 +27,13 @@ class Crop extends AbstractTransform
 		$this->_y      = $y;
 		$this->_ratio  = $ratio;
 	}
-
-	public static function create($config) 
-	{
-		return new self(
-			$config['w'], $config['h'], 
-			$config['x'], $config['y'], 
-			empty($config['r']) ? null : $config['r']
-		);
-	}
 	
 	public function serializeConfig() 
 	{
 		return 
-			($this->_ratio ? Transform::nullSerialize($this->_ratio) : '0') . ',' .
-			Transform::nullSerialize($this->_width) . ',' . Transform::nullSerialize($this->_height) . ',' .
-			Transform::nullSerialize($this->_x)     . ',' . Transform::nullSerialize($this->_y);
+			($this->_ratio ? Helper::nullSerialize($this->_ratio) : '0') . ',' .
+			Helper::nullSerialize($this->_width) . ',' . Helper::nullSerialize($this->_height) . ',' .
+			Helper::nullSerialize($this->_x)     . ',' . Helper::nullSerialize($this->_y);
 	}
 	
 	public function apply(ImageInterface &$image) 
@@ -50,12 +41,12 @@ class Crop extends AbstractTransform
 		$box = $image->getSize();
 
 		// x and y is the center of the crop
-		$x = Transform::percentValue($this->_x,      $boxw = $box->getWidth());
-		$y = Transform::percentValue($this->_y,      $boxh = $box->getHeight());
-		$w = Transform::percentValue($this->_width,  $boxw);
-		$h = Transform::percentValue($this->_height, $boxh);
+		$x = Helper::percentValue($this->_x,      $boxw = $box->getWidth());
+		$y = Helper::percentValue($this->_y,      $boxh = $box->getHeight());
+		$w = Helper::percentValue($this->_width,  $boxw);
+		$h = Helper::percentValue($this->_height, $boxh);
 
-		Transform::scaleSize($w, $h, $box);
+		Helper::scaleSize($w, $h, $box);
 		
 		if ($this->_ratio) {
 			switch ($this->_ratio) {
@@ -66,7 +57,7 @@ class Crop extends AbstractTransform
 				case self::CONTAIN:
 					$max = max($w, $h);
 					$img = \yii\imagine\Image::getImagine()->create(new Box($max, $max), new Color(0, 100));
-					$img->paste($image, new Point(($max - $w) * .5, ($max - $h) * .5));
+					$img->paste($image, new Point(($max - $boxw) * .5, ($max - $boxh) * .5));
 					$image = $img;
 					return;
 
