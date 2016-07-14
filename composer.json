@@ -6,6 +6,11 @@
     "require": {
         "yiisoft/yii2-imagine": "^2.0"
     },
+    "autoload": {
+        "psr-4": {
+            "x000000\\StorageManager\\": ""
+        }
+    },
     "license": "MIT",
     "authors": [
         {
