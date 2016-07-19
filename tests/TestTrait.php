@@ -12,9 +12,12 @@ trait TestTrait
 	private $_storage;
 	private $_runtime = __DIR__ . '/runtime';
 	private $_data    = __DIR__ . '/data';
+	private $_isTravis;
 
 	private function setUpRuntime()
 	{
+		$this->_isTravis = getenv('CI') || getenv('TRAVIS');
+
 		\yii\helpers\FileHelper::removeDirectory($this->_runtime);
 		mkdir($this->_runtime, 0775);
 

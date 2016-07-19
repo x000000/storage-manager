@@ -50,25 +50,9 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testCrop()
 	{
-		if (!$this->copyDataFiles()) {
-			return null;
+		if ($this->copyDataFiles()) {
+			$this->assertFileTransforms($this->getCrop());
 		}
-
-		$this->assertFileTransforms($list = [
-			new Crop(16, 16, 0, 0),
-			new Crop(16, '50%', 0, 0),
-			new Crop('50%', 16, 10, 20),
-			new Crop('50%', '20%', 0, 0),
-			new Crop(null, '20%', 20, 10),
-			new Crop('20%', null, 0, 0),
-			new Crop('41%', null, '71%', '40%'),
-			new Crop(null, '41%', '71%', '40%'),
-			new Crop('100%', '100%', '50%', '50%', Crop::COVER),
-			new Crop('100%', '100%', '50%', '50%', Crop::CONTAIN),
-			new Crop('20%', '10%', '30%', '40%', 16/10),
-		]);
-
-		return $list;
 	}
 
 	/**
@@ -76,30 +60,12 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testResize()
 	{
-		if (!$this->copyDataFiles()) {
-			return null;
+		if ($this->copyDataFiles()) {
+			$this->assertFileTransforms($this->getResize());
 		}
-
-		$this->assertFileTransforms($list = [
-			new Resize(32, 64),
-			new Resize(32, '64%'),
-			new Resize('32%', 64),
-			new Resize('50%', '64%'),
-			new Resize(null, 64),
-			new Resize(null, '64%'),
-			new Resize(32, null),
-			new Resize('32%', null),
-		]);
-
-		return $list;
 	}
 
-	/**
-	 * @param array[] $transforms
-	 * @depends testResize
-	 * @depends testCrop
-	 */
-	public function testTransform(... $transforms)
+	public function testTransform()
 	{
 		if (!$this->copyDataFiles()) {
 			return;
@@ -110,7 +76,8 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 			$files[] = $this->_storage->processFile($file);
 		}
 
-		$sequencer = new GroupSequencer(... array_filter($transforms));
+		$transforms = [$this->getResize(), $this->getCrop()];
+		$sequencer  = new GroupSequencer(... array_filter($transforms));
 		foreach ($files as $file) {
 			foreach ($sequencer->getIterator() as $sequence) {
 				$transform  = $this->_storage->thumb($file);
@@ -126,6 +93,37 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 
 			$this->assertTransform('/storage/source', $file, $this->_storage->thumb($file));
 		}
+	}
+
+	private function getCrop()
+	{
+		return [
+			new Crop(16, 16, 0, 0),
+			new Crop(16, '50%', 0, 0),
+			new Crop('50%', 16, 10, 20),
+			new Crop('50%', '20%', 0, 0),
+			new Crop(null, '20%', 20, 10),
+			new Crop('20%', null, 0, 0),
+			new Crop('41%', null, '71%', '40%'),
+			new Crop(null, '41%', '71%', '40%'),
+			new Crop('100%', '100%', '50%', '50%', Crop::COVER),
+			new Crop('100%', '100%', '50%', '50%', Crop::CONTAIN),
+			new Crop('20%', '10%', '30%', '40%', 16/10),
+		];
+	}
+
+	private function getResize()
+	{
+		return [
+			new Resize(32, 64),
+			new Resize(32, '64%'),
+			new Resize('32%', 64),
+			new Resize('50%', '64%'),
+			new Resize(null, 64),
+			new Resize(null, '64%'),
+			new Resize(32, null),
+			new Resize('32%', null),
+		];
 	}
 
 	private function assertTransform($thumbPath, $file, Transform $transform)
@@ -156,6 +154,11 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 	 */
 	private function assertFileTransforms($transforms)
 	{
+		if ($this->_isTravis) {
+			$this->markTestSkipped("Test skipped due Travis-CI's version of GD");
+			return;
+		}
+
 		$imagine = \yii\imagine\Image::getImagine();
 		foreach (glob("$this->_runtime/*") as $file) {
 			$image = $imagine->open($file);
