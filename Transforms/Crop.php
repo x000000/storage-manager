@@ -12,14 +12,14 @@ class Crop extends AbstractTransform
 {
 	const COVER   = 'cv';
 	const CONTAIN = 'cn';
-	
+
 	private $_width;
 	private $_height;
 	private $_x;
 	private $_y;
 	private $_ratio;
-	
-	public function __construct($width, $height, $x, $y, $ratio = null) 
+
+	public function __construct($width, $height, $x, $y, $ratio = null)
 	{
 		$this->_width  = $width;
 		$this->_height = $height;
@@ -27,16 +27,21 @@ class Crop extends AbstractTransform
 		$this->_y      = $y;
 		$this->_ratio  = $ratio;
 	}
-	
-	public function serializeConfig() 
+
+	public function getAlias()
 	{
-		return 
+		return 'cr';
+	}
+
+	public function serializeConfig()
+	{
+		return
 			($this->_ratio ? Helper::nullSerialize($this->_ratio) : '0') . ',' .
 			Helper::nullSerialize($this->_width) . ',' . Helper::nullSerialize($this->_height) . ',' .
 			Helper::nullSerialize($this->_x)     . ',' . Helper::nullSerialize($this->_y);
 	}
-	
-	public function apply(ImageInterface &$image) 
+
+	public function apply(ImageInterface &$image)
 	{
 		$box = $image->getSize();
 
@@ -47,7 +52,7 @@ class Crop extends AbstractTransform
 		$h = Helper::percentValue($this->_height, $boxh);
 
 		Helper::scaleSize($w, $h, $box);
-		
+
 		if ($this->_ratio) {
 			switch ($this->_ratio) {
 				case self::COVER:
@@ -95,5 +100,5 @@ class Crop extends AbstractTransform
 			new Box($w, $h)
 		);
 	}
-	
+
 }

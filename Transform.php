@@ -6,36 +6,31 @@ namespace x000000\StorageManager;
  * @method Transform resize(int? $width, int? $height) resize
  * @method Transform crop(int? $width, int? $height, int|string $x, int|string $y, int|string $ratio = null) crop
  */
-class Transform 
+class Transform
 {
-	const ALIAS_MAP = [
-		Transforms\Resize::class => 'sz',
-		Transforms\Crop::class   => 'cr',
-	];
-
 	private $_storage;
 	private $_source;
 	private $_transforms = [];
 	private $_rawUrl;
 	private $_url;
-	
+
 	private $_map = [
 		'resize' => Transforms\Resize::class,
 		'crop'   => Transforms\Crop::class,
 	];
-	
-	public function __construct(Storage $storage, $source) 
+
+	public function __construct(Storage $storage, $source)
 	{
 		$this->_storage = $storage;
 		$this->_source  = $source;
 	}
-	
-	public function __toString() 
+
+	public function __toString()
 	{
 		return $this->url();
 	}
-	
-	public function url() 
+
+	public function url()
 	{
 		if ($this->_url === null) {
 			if (empty($this->_source)) {
@@ -55,13 +50,13 @@ class Transform
 			// we should encode file name so it won't break anything
 			$path   = explode('/', $path);
 			$path[] = urlencode( array_pop($path) );
-			
+
 			return $this->_url = implode('/', $path);
 		}
 		return $this->_url;
 	}
-	
-	public function rawUrl() 
+
+	public function rawUrl()
 	{
 		if ($this->_url === null) {
 			$this->url();
@@ -69,19 +64,27 @@ class Transform
 		return $this->_rawUrl;
 	}
 
-	public function __call($name, $arguments) 
+	public function getTransforms()
+	{
+		return $this->_transforms;
+	}
+
+	public function add($transform)
+	{
+		if ($this->_url !== null) {
+			throw new \yii\base\InvalidCallException('Transforms already applied');
+		}
+		$this->_transforms[] = $transform;
+	}
+
+	public function __call($name, $arguments)
 	{
 		if (isset($this->_map[$name])) {
-			if ($this->_url !== null) {
-				throw new \yii\base\InvalidCallException('Transforms already applied');
-			}
-
 			$class = $this->_map[$name];
-			$this->_transforms[] = new $class(... $arguments);
-			
+			$this->add(new $class(... $arguments));
 			return $this;
 		} else {
-			return parent::__call($name, $arguments);
+			throw new \BadFunctionCallException('Method ' . self::class . "::$name() is not exists");
 		}
 	}
 
