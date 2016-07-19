@@ -10,24 +10,29 @@ class Resize extends AbstractTransform
 {
 	private $_width;
 	private $_height;
-	
-	public function __construct($width, $height) 
+
+	public function __construct($width, $height)
 	{
 		$this->_width  = $width;
 		$this->_height = $height;
 	}
 
-	public function serializeConfig() 
+	public function getAlias()
+	{
+		return 'sz';
+	}
+
+	public function serializeConfig()
 	{
 		return Helper::nullSerialize($this->_width) . ',' . Helper::nullSerialize($this->_height);
 	}
-	
-	public function apply(ImageInterface &$image) 
+
+	public function apply(ImageInterface &$image)
 	{
 		$box    = $image->getSize();
 		$width  = Helper::percentValue($this->_width,  $box->getWidth());
 		$height = Helper::percentValue($this->_height, $box->getHeight());
-		
+
 		// no upscale
 		if ($box->getWidth() <= $width && $box->getHeight() <= $height) {
 			return;
@@ -37,5 +42,5 @@ class Resize extends AbstractTransform
 
 		$image->resize(new Box($width, $height));
 	}
-	
+
 }
