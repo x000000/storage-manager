@@ -2,7 +2,7 @@
     "name": "x000000/storage-manager",
     "description": "Yii2 storage manager with thumbs support",
     "type": "library",
-    "version": "0.2.0-dev",
+    "version": "0.2.1-dev",
     "require": {
         "php": ">=5.6.0",
         "yiisoft/yii2-imagine": "^2.0"
