@@ -14,7 +14,7 @@ class Transform
 	private $_rawUrl;
 	private $_url;
 
-	private $_map = [
+	public static $transformMap = [
 		'resize' => Transforms\Resize::class,
 		'crop'   => Transforms\Crop::class,
 	];
@@ -69,7 +69,7 @@ class Transform
 		return $this->_transforms;
 	}
 
-	public function add($transform)
+	public function add(Transforms\AbstractTransform $transform)
 	{
 		if ($this->_url !== null) {
 			throw new \BadMethodCallException('Transforms already applied');
@@ -79,8 +79,8 @@ class Transform
 
 	public function __call($name, $arguments)
 	{
-		if (isset($this->_map[$name])) {
-			$class = $this->_map[$name];
+		if (isset(self::$transformMap[$name])) {
+			$class = self::$transformMap[$name];
 			$this->add(new $class(... $arguments));
 			return $this;
 		} else {
