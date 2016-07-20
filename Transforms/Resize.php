@@ -4,6 +4,7 @@ namespace x000000\StorageManager\Transforms;
 
 use Imagine\Image\Box;
 use Imagine\Image\ImageInterface;
+use Imagine\Image\ImagineInterface;
 use x000000\StorageManager\Helper;
 
 class Resize extends AbstractTransform
@@ -27,7 +28,7 @@ class Resize extends AbstractTransform
 		return Helper::nullSerialize($this->_width) . ',' . Helper::nullSerialize($this->_height);
 	}
 
-	public function apply(ImageInterface &$image)
+	public function apply(ImageInterface &$image, ImagineInterface $imagine)
 	{
 		$box    = $image->getSize();
 		$width  = Helper::percentValue($this->_width,  $box->getWidth());

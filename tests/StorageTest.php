@@ -2,7 +2,9 @@
 
 namespace x000000\StorageManager\tests;
 
+use Imagine\Image\ImagineInterface;
 use x000000\StorageManager\Helper;
+use x000000\StorageManager\Storage;
 use x000000\StorageManager\Transforms\Crop;
 use x000000\StorageManager\Transforms\Resize;
 
@@ -21,6 +23,100 @@ class StorageTest extends \PHPUnit_Framework_TestCase
 		parent::tearDown();
 		$this->tearDownRuntime();
 	}
+
+
+	public function testImagineGmagick()
+	{
+		if (!class_exists('Gmagick', false)) {
+			$this->expectException(\Exception::class);
+		}
+		$imagine = Storage::createImagine(Storage::DRIVER_GMAGICK);
+		$this->assertInstanceOf(\Imagine\Gmagick\Imagine::class, $imagine);
+
+		return [Storage::DRIVER_GMAGICK => $imagine];
+	}
+
+	public function testImagineImagick()
+	{
+		if (!class_exists('Imagick', false)) {
+			$this->expectException(\Exception::class);
+		}
+		$imagine = Storage::createImagine(Storage::DRIVER_IMAGICK);
+		$this->assertInstanceOf(\Imagine\Imagick\Imagine::class, $imagine);
+
+		return [Storage::DRIVER_IMAGICK => $imagine];
+	}
+
+	public function testImagineGD2()
+	{
+		if (!function_exists('gd_info')) {
+			$this->expectException(\Exception::class);
+		}
+		$imagine = Storage::createImagine(Storage::DRIVER_GD2);
+		$this->assertInstanceOf(\Imagine\Gd\Imagine::class, $imagine);
+
+		return [Storage::DRIVER_GD2 => $imagine];
+	}
+
+	/**
+	 * @param ImagineInterface[] ...$imagines
+	 * @return array Drivers map
+	 * @depends testImagineGmagick
+	 * @depends testImagineImagick
+	 * @depends testImagineGD2
+	 */
+	public function testImagine(... $imagines)
+	{
+		$imagines = array_merge(... array_filter($imagines));
+		$this->assertNotEmpty($imagines);
+
+		$drivers = [
+			Storage::DRIVER_GMAGICK => \Imagine\Gmagick\Imagine::class,
+			Storage::DRIVER_IMAGICK => \Imagine\Imagick\Imagine::class,
+			Storage::DRIVER_GD2     => \Imagine\Gd\Imagine::class,
+		];
+
+		for ($i = 0; $i < count($drivers); $i++) {
+			$slice   = array_slice($drivers, $i);
+			$expect  = array_intersect_key($slice, $imagines);
+			$imagine = Storage::createImagine(array_keys($slice));
+			$this->assertInstanceOf(reset($expect), $imagine);
+		}
+
+		$thrown = false;
+		try
+		{
+			Storage::createImagine([]);
+		}
+		catch (\Exception $e) {
+			$thrown = preg_match('# driver#i', $e->getMessage());
+		}
+		finally {
+			if (!$thrown) {
+				$this->fail('Storage::createImagine() have to throw an error if no supported drivers supplied');
+			}
+		}
+
+		return $drivers;
+	}
+
+	/**
+	 * @param array $drivers See [[testImagine()]] return value
+	 * @depends testImagine
+	 */
+	public function testStorageImagine($drivers)
+	{
+		$this->assertInstanceOf(ImagineInterface::class, $this->_storage->getImagine());
+
+		for ($i = 0; $i < count($drivers); $i++) {
+			$slice   = array_slice($drivers, $i);
+			$imagine = Storage::createImagine(array_keys($slice));
+
+			$this->_storage->setImagine($imagine);
+			$this->assertEquals($imagine, $this->_storage->getImagine());
+		}
+	}
+
 
 	public function testRelativeDir()
 	{
@@ -81,15 +177,15 @@ class StorageTest extends \PHPUnit_Framework_TestCase
 		}
 
 		foreach ($glob as $file) {
-			$throwed = false;
+			$thrown = false;
 			try {
 				$this->_storage->processFile($file);
 			}
 			catch (\Exception $e) {
-				$throwed = preg_match('#no such file or directory#i', $e->getMessage());
+				$thrown = preg_match('#no such file or directory#i', $e->getMessage());
 			}
 			finally {
-				if (!$throwed) {
+				if (!$thrown) {
 					$this->fail('Storage manager have to throw an exception on processing an invalid file');
 				}
 			}
@@ -142,7 +238,7 @@ class StorageTest extends \PHPUnit_Framework_TestCase
 		}
 
 		foreach ($glob as $file) {
-			$throwed = false;
+			$thrown = false;
 			try {
 				$this->_storage->processUploadedFile([
 					'tmp_name' => $file,
@@ -151,10 +247,10 @@ class StorageTest extends \PHPUnit_Framework_TestCase
 				]);
 			}
 			catch (\Exception $e) {
-				$throwed = preg_match('#no such file or directory#i', $e->getMessage());
+				$thrown = preg_match('#no such file or directory#i', $e->getMessage());
 			}
 			finally {
-				if (!$throwed) {
+				if (!$thrown) {
 					$this->fail('Storage manager have to throw an exception on processing an invalid file');
 				}
 			}
@@ -214,6 +310,7 @@ class StorageTest extends \PHPUnit_Framework_TestCase
 	 * @depends testTransformSerialize
 	 * @depends testFileProcessing
 	 * @depends testRelativeDir
+	 * @depends testStorageImagine
 	 */
 	public function testCreateThumb($transforms)
 	{
@@ -221,6 +318,7 @@ class StorageTest extends \PHPUnit_Framework_TestCase
 			return;
 		}
 
+		array_pop($transforms);
 		$glob = glob("$this->_runtime/*");
 		foreach ($glob as $file) {
 			$source = $this->_storage->processFile($file);
