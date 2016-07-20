@@ -5,6 +5,7 @@ namespace x000000\StorageManager\Transforms;
 use Imagine\Image\Box;
 use Imagine\Image\Color;
 use Imagine\Image\ImageInterface;
+use Imagine\Image\ImagineInterface;
 use Imagine\Image\Point;
 use x000000\StorageManager\Helper;
 
@@ -41,7 +42,7 @@ class Crop extends AbstractTransform
 			Helper::nullSerialize($this->_x)     . ',' . Helper::nullSerialize($this->_y);
 	}
 
-	public function apply(ImageInterface &$image)
+	public function apply(ImageInterface &$image, ImagineInterface $imagine)
 	{
 		$box = $image->getSize();
 
@@ -61,7 +62,7 @@ class Crop extends AbstractTransform
 
 				case self::CONTAIN:
 					$max = max($w, $h);
-					$img = \yii\imagine\Image::getImagine()->create(new Box($max, $max), new Color(0, 100));
+					$img = $imagine->create(new Box($max, $max), new Color(0, 100));
 					$img->paste($image, new Point(($max - $boxw) * .5, ($max - $boxh) * .5));
 					$image = $img;
 					return;

@@ -13,9 +13,10 @@ cache:
     - $HOME/.composer/cache
 
 install:
+  - travis_retry wget -nc -P $HOME/.composer/cache https://phar.phpunit.de/phpunit.phar && cp $HOME/.composer/cache/phpunit.phar phpunit.phar && php phpunit.phar --version
   - travis_retry composer self-update && composer --version
   - travis_retry composer global require "fxp/composer-asset-plugin:^1.2.0"
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
   - travis_retry composer install --prefer-dist --no-interaction
 
-script: phpunit --verbose
+script: php phpunit.phar --verbose

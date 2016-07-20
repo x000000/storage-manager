@@ -18,19 +18,15 @@ trait TestTrait
 	{
 		$this->_isTravis = getenv('CI') || getenv('TRAVIS');
 
-		\yii\helpers\FileHelper::removeDirectory($this->_runtime);
+		$this->removeDirectory($this->_runtime);
 		mkdir($this->_runtime, 0775);
 
-		$this->_storage = new Storage([
-			'deepLevel' => 6,
-			'baseDir'   => "$this->_runtime/storage",
-			'webDir'    => '/storage',
-		]);
+		$this->_storage = new Storage("$this->_runtime/storage", '/storage', 6);
 	}
 
 	private function tearDownRuntime()
 	{
-		\yii\helpers\FileHelper::removeDirectory($this->_runtime);
+		$this->removeDirectory($this->_runtime);
 	}
 
 	private function copyDataFiles()
@@ -45,6 +41,36 @@ trait TestTrait
 			}
 		}
 		return true;
+	}
+
+	private function removeDirectory($dir)
+	{
+		if (!is_dir($dir)) {
+			return;
+		}
+		if (is_link($dir)) {
+			unlink($dir);
+		} else {
+			if (!($handle = opendir($dir))) {
+				return;
+			}
+
+			while (($file = readdir($handle)) !== false) {
+				if ($file === '.' || $file === '..') {
+					continue;
+				}
+
+				$path = $dir . DIRECTORY_SEPARATOR . $file;
+				if (is_dir($path)) {
+					$this->removeDirectory($path);
+				} else {
+					unlink($path);
+				}
+			}
+			closedir($handle);
+
+			rmdir($dir);
+		}
 	}
 
 }

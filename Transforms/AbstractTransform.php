@@ -6,7 +6,7 @@ abstract class AbstractTransform
 {
 	public abstract function getAlias();
 	public abstract function serializeConfig();
-	public abstract function apply(\Imagine\Image\ImageInterface &$image);
+	public abstract function apply(\Imagine\Image\ImageInterface &$image, \Imagine\Image\ImagineInterface $imagine);
 
 	public function serialize()
 	{

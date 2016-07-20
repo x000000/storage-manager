@@ -134,16 +134,16 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals("$thumbPath/$relDir/$thumbFile", $transform->rawUrl());
 		$this->assertEquals($transform->rawUrl(), urldecode($transform->url()));
 
-		$throwed = false;
+		$thrown = false;
 		try {
 			$transform->add(new Resize('50%', '50%'));
 		}
 		catch (\BadMethodCallException $e) {
 			// we have expected this, but we do not want to stop the test
-			$throwed = true;
+			$thrown = true;
 		}
 		finally {
-			if (!$throwed) {
+			if (!$thrown) {
 				$this->fail('Transform have to throw an exception on adding a new item to the queue after self render');
 			}
 		}
@@ -159,7 +159,7 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 			return;
 		}
 
-		$imagine = \yii\imagine\Image::getImagine();
+		$imagine = $this->_storage->getImagine();
 		foreach (glob("$this->_runtime/*") as $file) {
 			$image = $imagine->open($file);
 
@@ -167,7 +167,7 @@ class TransformTest extends \PHPUnit_Framework_TestCase
 				/** @var \Imagine\Image\ImageInterface $copy */
 				$copy  = $image->copy();
 				$thumb = pathinfo($file, PATHINFO_FILENAME) . Helper::serializeTransforms([$transform]) . '.' . pathinfo($file, PATHINFO_EXTENSION);
-				$transform->apply($copy);
+				$transform->apply($copy, $imagine);
 				$copy->save("$this->_runtime/$thumb", ['quality' => 90]);
 
 				$this->assertFileEquals("$this->_data/thumb/$thumb", "$this->_runtime/$thumb");
