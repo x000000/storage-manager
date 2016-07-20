@@ -2,15 +2,37 @@
 
 namespace x000000\StorageManager;
 
-class Storage extends \yii\base\Component
-{
-	public $deepLevel = 4;
+use Imagine\Image\ImagineInterface;
 
-	public  $webDir;
+class Storage
+{
+	/**
+	 * GD2 driver definition for Imagine implementation using the GD library.
+	 */
+	const DRIVER_GD2 = 'gd2';
+	/**
+	 * imagick driver definition.
+	 */
+	const DRIVER_IMAGICK = 'imagick';
+	/**
+	 * gmagick driver definition.
+	 */
+	const DRIVER_GMAGICK = 'gmagick';
+
+	/**
+	 * @var string|string[] Driver(s) to use. This can be either a single driver name or an array of driver names.
+	 * If the latter, the first available driver will be used.
+	 */
+	private $_driver;
+	private $_imagine;
+
+	private $_deepLevel = 4;
+
+	private $_webDir;
 	private $_webSrc;
 	private $_webThumb;
 
-	public  $baseDir;
+	private $_baseDir;
 	private $_baseSrc;
 	private $_baseThumb;
 
@@ -72,28 +94,84 @@ class Storage extends \yii\base\Component
 		],
 	];
 
-	public function init()
+	public function __construct($baseDir, $webDir, $deepLevel = 4, $driver = null)
 	{
-		if (!($this->deepLevel > 0 && $this->deepLevel < 16)) {
-			throw new \yii\base\InvalidConfigException("Invalid deep level!");
+		if (!($deepLevel > 0 && $deepLevel < 16)) {
+			throw new \Exception("Invalid deep level!");
 		}
-		if (empty($this->baseDir)) {
-			throw new \yii\base\InvalidConfigException("Base directory have not set!");
+		if (empty($baseDir)) {
+			throw new \Exception("Base directory have not set!");
 		}
-		if (empty($this->webDir)) {
-			throw new \yii\base\InvalidConfigException("Web directory have not set!");
+		if (empty($webDir)) {
+			throw new \Exception("Web directory have not set!");
 		}
 
-		$this->baseDir    = \Yii::getAlias($this->baseDir);
-		$this->webDir     = \Yii::getAlias($this->webDir);
-		$this->_baseSrc   = "{$this->baseDir}/source";
-		$this->_baseThumb = "{$this->baseDir}/thumb";
-		$this->_webSrc    = "{$this->webDir}/source";
-		$this->_webThumb  = "{$this->webDir}/thumb";
+		$this->_deepLevel = $deepLevel;
+		$this->_baseDir   = $baseDir;
+		$this->_webDir    = $webDir;
+		$this->_baseSrc   = "{$this->_baseDir}/source";
+		$this->_baseThumb = "{$this->_baseDir}/thumb";
+		$this->_webSrc    = "{$this->_webDir}/source";
+		$this->_webThumb  = "{$this->_webDir}/thumb";
+		$this->_driver    = $driver ?: [self::DRIVER_GMAGICK, self::DRIVER_IMAGICK, self::DRIVER_GD2];
 
 		if (class_exists('\finfo', false)) {
 			$this->_finfo = new \finfo();
 		}
+	}
+
+	/**
+	 * Returns an `Imagine` object for thumbnails creating.
+	 * @return ImagineInterface The `Imagine` object based on the [[_driver]] or one which set via [[setImagine()]]
+	 * @throws \Exception see [[createImagine()]]
+	 */
+	public function getImagine()
+	{
+		if ($this->_imagine === null) {
+			$this->_imagine = self::createImagine($this->_driver);
+		}
+		return $this->_imagine;
+	}
+
+	/**
+	 * Sets an `Imagine` object for thumbnails creating.
+	 * @param ImagineInterface $imagine An `Imagine` object
+	 */
+	public function setImagine(ImagineInterface $imagine)
+	{
+		$this->_imagine = $imagine;
+	}
+
+	/**
+	 * Creates a new `Imagine` object
+	 * @param string|string[] $drivers Driver(s) to create the `Imagine` object based on. See [[_driver]] for more info.
+	 * @return ImagineInterface the new `Imagine` object
+	 * @throws \Exception if [[$drivers]] is unknown or the system doesn't support any [[$drivers]].
+	 */
+	public static function createImagine($drivers)
+	{
+		foreach ((array) $drivers as $driver) {
+			switch ($driver) {
+				case self::DRIVER_GMAGICK:
+					if (class_exists('Gmagick', false)) {
+						return new \Imagine\Gmagick\Imagine();
+					}
+					break;
+				case self::DRIVER_IMAGICK:
+					if (class_exists('Imagick', false)) {
+						return new \Imagine\Imagick\Imagine();
+					}
+					break;
+				case self::DRIVER_GD2:
+					if (function_exists('gd_info')) {
+						return new \Imagine\Gd\Imagine();
+					}
+					break;
+				default:
+					throw new \Exception("Unknown driver: $driver");
+			}
+		}
+		throw new \Exception("Your system does not support any of these drivers: " . implode(',', (array) $drivers));
 	}
 
 	/**
@@ -158,7 +236,7 @@ class Storage extends \yii\base\Component
 	public function getFileDir($file)
 	{
 		$dir = '';
-		for ($i = 1; $i < $this->deepLevel; $i++) {
+		for ($i = 1; $i < $this->_deepLevel; $i++) {
 			$dir .= '/' . substr($file, 0, $i);
 		}
 		return substr($dir, 1);
@@ -241,9 +319,10 @@ class Storage extends \yii\base\Component
 			return false;
 		}
 
-		$image = \yii\imagine\Image::getImagine()->open($this->_baseSrc . "/$relDir/$file");
+		$imagine = $this->getImagine();
+		$image   = $imagine->open($this->_baseSrc . "/$relDir/$file");
 		foreach ($transforms as $transform) {
-			$transform->apply($image);
+			$transform->apply($image, $imagine);
 		}
 		$image->save($this->_baseThumb . $thbPath, ['quality' => 90]);
 

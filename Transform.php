@@ -72,7 +72,7 @@ class Transform
 	public function add($transform)
 	{
 		if ($this->_url !== null) {
-			throw new \yii\base\InvalidCallException('Transforms already applied');
+			throw new \BadMethodCallException('Transforms already applied');
 		}
 		$this->_transforms[] = $transform;
 	}
@@ -84,7 +84,7 @@ class Transform
 			$this->add(new $class(... $arguments));
 			return $this;
 		} else {
-			throw new \BadFunctionCallException('Method ' . self::class . "::$name() is not exists");
+			throw new \BadMethodCallException('Method ' . self::class . "::$name() is not exists");
 		}
 	}
 
