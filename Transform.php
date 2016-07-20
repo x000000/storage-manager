@@ -69,7 +69,7 @@ class Transform
 		return $this->_transforms;
 	}
 
-	public function add($transform)
+	public function add(Transforms\AbstractTransform $transform)
 	{
 		if ($this->_url !== null) {
 			throw new \BadMethodCallException('Transforms already applied');
