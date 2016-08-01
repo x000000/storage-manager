@@ -52,15 +52,15 @@ class Crop extends AbstractTransform
 		$w = Helper::percentValue($this->_width,  $boxw);
 		$h = Helper::percentValue($this->_height, $boxh);
 
-		Helper::scaleSize($w, $h, $box);
-
 		if ($this->_ratio) {
 			switch ($this->_ratio) {
 				case self::COVER:
+					Helper::scaleSize($w, $h, $box);
 					$w = $h = min($w, $h);
 					break;
 
 				case self::CONTAIN:
+					Helper::scaleSize($w, $h, $box);
 					$max = max($w, $h);
 					$img = $imagine->create(new Box($max, $max), new Color(0, 100));
 					$img->paste($image, new Point(($max - $boxw) * .5, ($max - $boxh) * .5));
@@ -68,17 +68,14 @@ class Crop extends AbstractTransform
 					return;
 
 				default: // custom ratio
-					if ($this->_ratio - $w / $h < 0) {
-						// fit by height
-						$k = 1 * $this->_ratio;
-						$w = $h * $k;
-					} else {
-						// fit by width
-						$k = 1 / $this->_ratio;
-						$h = $w * $k;
+					$this->fitByRatio($w, $h, $w && $h ? $w / $h : 0);
+					if (!$w || !$h) {
+						throw new \RuntimeException('Invalid ratio supplied');
 					}
 					break;
 			}
+		} else {
+			Helper::scaleSize($w, $h, $box);
 		}
 
 		$halfw = $w / 2;
@@ -100,6 +97,21 @@ class Crop extends AbstractTransform
 			new Point($x - $w / 2, $y - $h / 2), // top-left corner
 			new Box($w, $h)
 		);
+	}
+
+	private function fitByRatio(&$w, &$h, $ratio)
+	{
+		if ($ratio) {
+			if ($this->_ratio - $ratio < 0) {
+				// fit by height
+				$k = 1 * $this->_ratio;
+				$w = $h * $k;
+			} else {
+				// fit by width
+				$k = 1 / $this->_ratio;
+				$h = $w * $k;
+			}
+		}
 	}
 
 }
